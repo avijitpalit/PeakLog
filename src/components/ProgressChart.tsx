@@ -89,43 +89,43 @@ export function ProgressChart({ sessions }: ProgressChartProps) {
             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#1c1917" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#1c1917" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#dc2626" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#dc2626" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e7e5e4" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#262626" />
               <XAxis 
                 dataKey="dateStr" 
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: '#78716c', fontSize: 12 }}
+                tick={{ fill: '#737373', fontSize: 12 }}
                 dy={10}
               />
               <YAxis 
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: '#78716c', fontSize: 12 }}
+                tick={{ fill: '#737373', fontSize: 12 }}
                 domain={['auto', 'auto']}
               />
               <Tooltip 
                 contentStyle={{ 
-                  backgroundColor: '#ffffff', 
-                  border: '1px solid #e7e5e4',
+                  backgroundColor: '#171717', 
+                  border: '1px solid #262626',
                   borderRadius: '8px',
-                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.5)'
                 }}
-                itemStyle={{ color: '#1c1917', fontWeight: 500 }}
-                labelStyle={{ color: '#78716c', marginBottom: '4px' }}
+                itemStyle={{ color: '#f5f5f5', fontWeight: 500 }}
+                labelStyle={{ color: '#a3a3a3', marginBottom: '4px' }}
               />
               <Area 
                 type="monotone" 
                 dataKey="weight" 
                 name="Max Weight"
-                stroke="#1c1917" 
+                stroke="#dc2626" 
                 strokeWidth={2}
                 fillOpacity={1} 
                 fill="url(#colorWeight)" 
-                activeDot={{ r: 6, fill: '#1c1917', stroke: '#fff', strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: '#dc2626', stroke: '#fff', strokeWidth: 2 }}
               />
             </AreaChart>
           </ResponsiveContainer>

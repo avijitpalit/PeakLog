@@ -63,19 +63,19 @@ export function PersonalRecords({ sessions }: PersonalRecordsProps) {
         {records.map((record, index) => (
           <div 
             key={record.name}
-            className="relative bg-gradient-to-br from-white to-stone-50 border border-neutral-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow group overflow-hidden"
+            className="relative bg-[#0f0f0f] border border-neutral-800 rounded-xl p-5 shadow-sm hover:border-neutral-700 transition-all group overflow-hidden"
           >
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-yellow-100 to-transparent opacity-50 rounded-bl-full pointer-events-none" />
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-amber-500/10 to-transparent rounded-bl-full pointer-events-none" />
             
-            <div className="flex items-start justify-between mb-4">
-              <h3 className="font-semibold text-neutral-50 pr-4">{record.name}</h3>
-              <div className="text-yellow-600 bg-yellow-50 p-1.5 rounded-lg shadow-sm border border-yellow-100">
+            <div className="flex items-start justify-between mb-3">
+              <h3 className="font-semibold text-neutral-100 pr-4">{record.name}</h3>
+              <div className="text-amber-400 bg-amber-950/40 p-1.5 rounded-lg shadow-sm border border-amber-500/20 shrink-0">
                 {index === 0 ? <Crown className="w-4 h-4" /> : <Medal className="w-4 h-4" />}
               </div>
             </div>
 
             <div className="space-y-1">
-              <div className="text-2xl font-bold text-neutral-50">
+              <div className="text-2xl font-bold text-neutral-50 tracking-tight">
                 {record.label}
               </div>
               <div className="text-xs text-neutral-400 font-medium">

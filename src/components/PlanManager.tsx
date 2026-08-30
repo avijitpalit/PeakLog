@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Plus, Save, Trash2, Dumbbell, Edit2, X } from 'lucide-react';
+import { Plus, Save, Trash2, Dumbbell, Edit2, X, Wand2, Loader2 } from 'lucide-react';
 import { WorkoutPlan, PlanExercise } from '../types';
 
 interface PlanManagerProps {
@@ -13,11 +13,48 @@ interface PlanManagerProps {
 type FormExercise = Omit<PlanExercise, 'id'> & { id?: string };
 
 export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan }: PlanManagerProps) {
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [exercises, setExercises] = useState<FormExercise[]>([
     { name: '', targetSets: 3, targetReps: '8-12' }
   ]);
+  
+  const [showAiInput, setShowAiInput] = useState(false);
+  const [aiText, setAiText] = useState('');
+  const [isParsing, setIsParsing] = useState(false);
+
+  const handleParseAi = async () => {
+    if (!aiText.trim()) return;
+    setIsParsing(true);
+    try {
+      const response = await fetch('/api/parse-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: aiText })
+      });
+      if (!response.ok) throw new Error('API failed');
+      const data = await response.json();
+      
+      if (Array.isArray(data) && data.length > 0) {
+        // If current form only has one empty exercise, replace it. Otherwise append.
+        const isEmpty = exercises.length === 1 && !exercises[0].name.trim();
+        const newExercises = data.map((ex: any) => ({
+          name: ex.name || 'Unknown',
+          targetSets: Number(ex.targetSets) || 3,
+          targetReps: ex.targetReps || '8-12'
+        }));
+        
+        setExercises(isEmpty ? newExercises : [...exercises, ...newExercises]);
+        setAiText('');
+        setShowAiInput(false);
+      }
+    } catch (err) {
+      alert('Failed to parse plan. Make sure the Gemini API key is configured in .env');
+    } finally {
+      setIsParsing(false);
+    }
+  };
 
   const handleAddExercise = () => {
     setExercises([...exercises, { name: '', targetSets: 3, targetReps: '8-12' }]);
@@ -37,6 +74,7 @@ export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan }: Plan
     setEditingPlanId(plan.id);
     setName(plan.name);
     setExercises(plan.exercises);
+    setIsFormOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -44,6 +82,7 @@ export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan }: Plan
     setEditingPlanId(null);
     setName('');
     setExercises([{ name: '', targetSets: 3, targetReps: '8-12' }]);
+    setIsFormOpen(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -62,103 +101,165 @@ export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan }: Plan
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div>
-        <h2 className="text-xl font-semibold text-neutral-50 mb-1">Workout Plans</h2>
-        <p className="text-sm text-neutral-400">Create templates to use when logging workouts.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-neutral-50 mb-1">Workout Plans</h2>
+          <p className="text-sm text-neutral-400">Create templates to use when logging workouts.</p>
+        </div>
+        {!isFormOpen && (
+          <button
+            type="button"
+            onClick={() => {
+              handleCancelEdit();
+              setIsFormOpen(true);
+            }}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-700 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-all shadow-md active:scale-95 shrink-0"
+          >
+            <Plus className="w-4 h-4" /> Create New Plan
+          </button>
+        )}
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-[#111111] p-5 rounded-xl border border-neutral-800 space-y-5">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-lg font-medium text-neutral-50">
-            {editingPlanId ? 'Edit Plan' : 'Create New Plan'}
-          </h3>
-          {editingPlanId && (
+      {isFormOpen && (
+        <form onSubmit={handleSubmit} className="bg-[#111111] p-4 sm:p-5 rounded-xl border border-neutral-800 space-y-5 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-medium text-neutral-50">
+              {editingPlanId ? 'Edit Plan' : 'Create New Plan'}
+            </h3>
             <button
               type="button"
               onClick={handleCancelEdit}
-              className="text-sm font-medium text-neutral-400 hover:text-neutral-50 inline-flex items-center gap-1"
+              className="text-sm font-medium text-neutral-400 hover:text-neutral-50 inline-flex items-center gap-1 p-1 rounded-md hover:bg-[#1a1a1a] transition-colors"
             >
               <X className="w-4 h-4" /> Cancel
             </button>
-          )}
-        </div>
-        <div>
-          <label className="text-sm font-medium text-neutral-300">Plan Name</label>
-          <input
-            type="text"
-            required
-            placeholder="e.g. Push Day"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full px-3 py-2 rounded-lg border border-neutral-800 bg-[#0f0f0f] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600"
-          />
-        </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-neutral-300">Plan Name</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Push Day"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 w-full px-3 py-2 rounded-lg border border-neutral-800 bg-[#0f0f0f] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600 text-neutral-100 placeholder:text-neutral-600"
+            />
+          </div>
 
-        <div className="space-y-3">
-          <label className="text-sm font-medium text-neutral-300">Exercises</label>
-          {exercises.map((ex, index) => (
-            <div key={index} className="flex flex-wrap sm:flex-nowrap gap-3 items-end bg-[#0f0f0f] p-3 rounded-lg border border-neutral-800 shadow-sm">
-              <div className="flex-1 min-w-[150px]">
-                <label className="text-xs text-neutral-400 mb-1 block">Exercise Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Flat Barbell Press"
-                  value={ex.name}
-                  onChange={(e) => handleExerciseChange(index, 'name', e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-md border border-neutral-800 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600"
-                />
-              </div>
-              <div className="w-20">
-                <label className="text-xs text-neutral-400 mb-1 block">Sets</label>
-                <input
-                  type="number"
-                  min="1"
-                  required
-                  value={ex.targetSets}
-                  onChange={(e) => handleExerciseChange(index, 'targetSets', parseInt(e.target.value) || 0)}
-                  className="w-full px-3 py-1.5 rounded-md border border-neutral-800 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600"
-                />
-              </div>
-              <div className="w-28">
-                <label className="text-xs text-neutral-400 mb-1 block">Reps (Range)</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="6-10"
-                  value={ex.targetReps}
-                  onChange={(e) => handleExerciseChange(index, 'targetReps', e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-md border border-neutral-800 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600"
-                />
-              </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-neutral-300">Exercises</label>
               <button
                 type="button"
-                onClick={() => handleRemoveExercise(index)}
-                disabled={exercises.length === 1}
-                className="p-2 mb-0.5 text-neutral-500 hover:text-red-500 hover:bg-red-950/30 rounded-md transition-colors disabled:opacity-50"
+                onClick={() => setShowAiInput(!showAiInput)}
+                className="text-xs font-medium text-neutral-400 hover:text-red-400 inline-flex items-center gap-1.5 transition-colors"
               >
-                <Trash2 className="w-4 h-4" />
+                <Wand2 className="w-3.5 h-3.5" /> 
+                {showAiInput ? 'Hide AI Input' : 'Paste text (AI)'}
               </button>
             </div>
-          ))}
-          <button
-            type="button"
-            onClick={handleAddExercise}
-            className="text-sm font-medium text-neutral-50 bg-[#222222]/50 hover:bg-[#222222] px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" /> Add Exercise
-          </button>
-        </div>
 
-        <div className="pt-2 flex gap-3">
-          <button
-            type="submit"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-red-700 text-white text-sm font-medium rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-600 transition-all"
-          >
-            <Save className="w-4 h-4" /> {editingPlanId ? 'Update Plan' : 'Save Plan'}
-          </button>
-        </div>
-      </form>
+            {showAiInput && (
+              <div className="bg-[#1a1a1a] p-3 rounded-lg border border-neutral-800 space-y-3 mb-4 animate-in fade-in zoom-in-95 duration-200">
+                <textarea
+                  placeholder="Paste your workout text here... (e.g. 3 sets of Bench Press 8-12 reps, 3 sets Incline DB Press 10 reps)"
+                  value={aiText}
+                  onChange={(e) => setAiText(e.target.value)}
+                  rows={4}
+                  className="w-full px-3 py-2 rounded-md border border-neutral-800 bg-[#0f0f0f] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600 resize-none text-neutral-200 placeholder:text-neutral-600"
+                />
+                <button
+                  type="button"
+                  onClick={handleParseAi}
+                  disabled={isParsing || !aiText.trim()}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-neutral-800 text-neutral-200 text-sm font-medium rounded-md hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-red-600 transition-colors disabled:opacity-50"
+                >
+                  {isParsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                  {isParsing ? 'Parsing with AI...' : 'Auto-fill Exercises'}
+                </button>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {exercises.map((ex, index) => (
+                <div key={index} className="py-3 border-b border-neutral-800/80 last:border-0 space-y-2.5">
+                  {/* Row 1: Exercise Name */}
+                  <div>
+                    <label className="text-xs text-neutral-400 mb-1 block font-medium">Exercise Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Flat Barbell Press"
+                      value={ex.name}
+                      onChange={(e) => handleExerciseChange(index, 'name', e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-neutral-800 bg-[#0f0f0f] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600 text-neutral-100 placeholder:text-neutral-600"
+                    />
+                  </div>
+
+                  {/* Row 2: Sets, Rep Range, Delete Button */}
+                  <div className="flex items-end gap-2">
+                    <div className="w-24 sm:w-28">
+                      <label className="text-xs text-neutral-400 mb-1 block font-medium">Sets</label>
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        value={ex.targetSets}
+                        onChange={(e) => handleExerciseChange(index, 'targetSets', parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2 rounded-lg border border-neutral-800 bg-[#0f0f0f] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600 text-neutral-100"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-neutral-400 mb-1 block font-medium">Rep Range</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 8-12"
+                        value={ex.targetReps}
+                        onChange={(e) => handleExerciseChange(index, 'targetReps', e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-neutral-800 bg-[#0f0f0f] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600 text-neutral-100 placeholder:text-neutral-600"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveExercise(index)}
+                      disabled={exercises.length === 1}
+                      className="p-2 sm:p-2.5 h-[42px] sm:h-[38px] text-neutral-400 hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-colors disabled:opacity-20 flex items-center justify-center shrink-0"
+                      title="Delete Exercise"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleAddExercise}
+              className="text-sm font-medium text-neutral-50 bg-[#222222]/50 hover:bg-[#222222] px-3.5 py-2 rounded-lg transition-colors inline-flex items-center gap-1.5 border border-neutral-800"
+            >
+              <Plus className="w-4 h-4" /> Add Exercise
+            </button>
+          </div>
+
+          <div className="pt-2 flex gap-3">
+            <button
+              type="submit"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-red-700 text-white text-sm font-medium rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-600 transition-all"
+            >
+              <Save className="w-4 h-4" /> {editingPlanId ? 'Update Plan' : 'Save Plan'}
+            </button>
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-800 text-neutral-300 text-sm font-medium rounded-lg hover:bg-neutral-700 transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       {plans.length > 0 && (
         <div className="space-y-4">

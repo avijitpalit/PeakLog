@@ -107,7 +107,7 @@ export default function App() {
         </nav>
 
         <main className="bg-black/80 backdrop-blur-xl rounded-2xl shadow-[0_0_40px_-10px_rgba(220,38,38,0.15)] border border-neutral-800 p-3 sm:p-6 lg:p-8 min-h-[500px]">
-          {activeTab === 'log' && <WorkoutForm plans={plans} selectedPlanId={selectedPlanId} onSelectPlan={setSelectedPlanId} onSaveSession={addSession} />}
+          {activeTab === 'log' && <WorkoutForm sessions={sessions} plans={plans} selectedPlanId={selectedPlanId} onSelectPlan={setSelectedPlanId} onSaveSession={addSession} />}
           {activeTab === 'plans' && <PlanManager plans={plans} onSavePlan={savePlan} onDeletePlan={deletePlan} onLogPlan={handleLogPlan} />}
           {activeTab === 'assessment' && <Assessment sessions={sessions} />}
           {activeTab === 'history' && <WorkoutList sessions={sessions} onDelete={deleteSession} />}

@@ -15,6 +15,7 @@ export interface LoggedSet {
   id: string;
   weight: string;
   reps: string;
+  rir?: string;
   notes: string;
 }
 
