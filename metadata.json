@@ -1,0 +1,6 @@
+{
+  "name": "Workout Tracker",
+  "description": "Log exercises, track personal records, and visualize your fitness progress.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
