@@ -23,31 +23,48 @@ export function Assessment({ sessions }: AssessmentProps) {
     let text = `${format(parseISO(session.date), 'EEEE, MMMM d, yyyy')} - ${session.planName}\n`;
     if (session.notes) text += `Session Notes: ${session.notes}\n`;
     
-    session.exercises.forEach((ex, exIndex) => {
+    session.exercises.forEach((ex) => {
       text += `\n${ex.name} (${ex.targetSets} × ${ex.targetReps})\n`;
       
+      if (ex.notes && ex.notes.trim()) {
+        text += `Exercise Note: ${ex.notes.trim()}\n`;
+      }
+
       if (ex.status === 'missed') {
         text += `Missed today\n`;
         return;
       }
 
-      if (ex.notes) {
-        text += `${ex.notes} - `;
-      }
-
-      const groups: { weight: string, sets: { reps: string, notes: string }[] }[] = [];
+      const groups: { weight: string, sets: { reps: string, rir?: string, notes: string }[] }[] = [];
       for (const set of ex.sets) {
         const wStr = set.weight.trim();
+        const setObj = {
+          reps: set.reps.trim(),
+          rir: set.rir?.trim(),
+          notes: set.notes.trim()
+        };
+
         if (groups.length > 0 && groups[groups.length - 1].weight === wStr) {
-          groups[groups.length - 1].sets.push({ reps: set.reps.trim(), notes: set.notes.trim() });
+          groups[groups.length - 1].sets.push(setObj);
         } else {
-          groups.push({ weight: wStr, sets: [{ reps: set.reps.trim(), notes: set.notes.trim() }] });
+          groups.push({ weight: wStr, sets: [setObj] });
         }
       }
 
       const formattedGroups = groups.map(g => {
-        const setStrings = g.sets.map((s, i) => {
-          return s.notes ? `${s.reps} ${s.notes}` : s.reps;
+        const setStrings = g.sets.map((s) => {
+          const details: string[] = [];
+          if (s.rir) {
+            details.push(s.rir.toLowerCase().includes('rir') ? s.rir : `RIR ${s.rir}`);
+          }
+          if (s.notes) {
+            details.push(s.notes);
+          }
+
+          if (details.length > 0) {
+            return `${s.reps} (${details.join(', ')})`;
+          }
+          return s.reps;
         });
         
         let prefix = '';
@@ -57,8 +74,9 @@ export function Assessment({ sessions }: AssessmentProps) {
         return `${prefix}${setStrings.join(', ')}`;
       });
 
-      // Join groups with comma and space as requested in the format example
-      text += `${formattedGroups.join(', ')}\n`;
+      if (formattedGroups.length > 0) {
+        text += `${formattedGroups.join(', ')}\n`;
+      }
     });
 
     return text.trim();
