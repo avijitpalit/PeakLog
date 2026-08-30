@@ -12,6 +12,45 @@ interface PlanManagerProps {
 
 type FormExercise = Omit<PlanExercise, 'id'> & { id?: string };
 
+function parseWorkoutTextLocally(text: string): { name: string; targetSets: number; targetReps: string }[] {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const results: { name: string; targetSets: number; targetReps: string }[] = [];
+
+  for (const rawLine of lines) {
+    // Strip leading numbers/bullets like "1.", "1)", "-", "*", "•"
+    let line = rawLine.replace(/^(\d+[\.\)]|\-|\*|•)\s*/, '').trim();
+    if (!line) continue;
+
+    let name = line;
+    let sets = 3;
+    let reps = '8-12';
+
+    // Pattern 1: Exercise (2 × 8-12) or (3x10) or [3 x 8-12]
+    const parenMatch = line.match(/^(.+?)[\s\(\[]+(\d+)\s*(?:[xX×*]|sets?\s*(?:of|x|\*|\×)?)\s*(\d+(?:-\d+)?|\d+\+?)\s*(?:reps?|times)?[\)\]]?$/i);
+    // Pattern 2: Exercise: 3x10 or Exercise - 3 x 8-12
+    const separatorMatch = line.match(/^(.+?)[\s:\-]+(\d+)\s*(?:[xX×*]|sets?\s*(?:of|x|\*|\×)?)\s*(\d+(?:-\d+)?|\d+\+?)\s*(?:reps?|times)?$/i);
+
+    if (parenMatch) {
+      name = parenMatch[1].replace(/[\(\[\:\-]+$/, '').trim();
+      sets = parseInt(parenMatch[2], 10) || 3;
+      reps = parenMatch[3].trim();
+    } else if (separatorMatch) {
+      name = separatorMatch[1].replace(/[\(\[\:\-]+$/, '').trim();
+      sets = parseInt(separatorMatch[2], 10) || 3;
+      reps = separatorMatch[3].trim();
+    }
+
+    if (name) {
+      results.push({
+        name,
+        targetSets: sets,
+        targetReps: reps
+      });
+    }
+  }
+  return results;
+}
+
 export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan }: PlanManagerProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
@@ -27,33 +66,50 @@ export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan }: Plan
   const handleParseAi = async () => {
     if (!aiText.trim()) return;
     setIsParsing(true);
+    let parsedExercises: { name: string; targetSets: number; targetReps: string }[] | null = null;
+
     try {
       const response = await fetch('/api/parse-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: aiText })
       });
-      if (!response.ok) throw new Error('API failed');
-      const data = await response.json();
       
-      if (Array.isArray(data) && data.length > 0) {
-        // If current form only has one empty exercise, replace it. Otherwise append.
-        const isEmpty = exercises.length === 1 && !exercises[0].name.trim();
-        const newExercises = data.map((ex: any) => ({
-          name: ex.name || 'Unknown',
-          targetSets: Number(ex.targetSets) || 3,
-          targetReps: ex.targetReps || '8-12'
-        }));
-        
-        setExercises(isEmpty ? newExercises : [...exercises, ...newExercises]);
-        setAiText('');
-        setShowAiInput(false);
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          parsedExercises = data.map((ex: any) => ({
+            name: ex.name || 'Unknown',
+            targetSets: Number(ex.targetSets) || 3,
+            targetReps: ex.targetReps || '8-12'
+          }));
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.warn('API parse failed, attempting local fallback parsing:', errorData);
       }
     } catch (err) {
-      alert('Failed to parse plan. Make sure the Gemini API key is configured in .env');
-    } finally {
-      setIsParsing(false);
+      console.warn('Network error reaching /api/parse-plan, using local fallback parser:', err);
     }
+
+    // If API failed or was unavailable, use smart local parser
+    if (!parsedExercises || parsedExercises.length === 0) {
+      const localResults = parseWorkoutTextLocally(aiText);
+      if (localResults.length > 0) {
+        parsedExercises = localResults;
+      }
+    }
+
+    if (parsedExercises && parsedExercises.length > 0) {
+      const isEmpty = exercises.length === 1 && !exercises[0].name.trim();
+      setExercises(isEmpty ? parsedExercises : [...exercises, ...parsedExercises]);
+      setAiText('');
+      setShowAiInput(false);
+    } else {
+      alert('Could not auto-detect exercises. Please check the text format or add exercises manually.');
+    }
+
+    setIsParsing(false);
   };
 
   const handleAddExercise = () => {

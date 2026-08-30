@@ -1,25 +1,35 @@
-import express from 'express';
-import path from 'path';
-import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
-import dotenv from 'dotenv';
 
-dotenv.config();
+export default async function handler(req: any, res: any) {
+  // Enable CORS if needed
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-const app = express();
-const PORT = 3000;
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
-app.use(express.json());
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-app.post('/api/parse-plan', async (req, res) => {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY environment variable is missing.' });
+      return res.status(500).json({ error: 'GEMINI_API_KEY environment variable is missing on Vercel.' });
     }
 
-    const { text } = req.body;
-    if (!text) {
+    let body = req.body;
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch (e) {
+        body = {};
+      }
+    }
+    const { text } = body || {};
+    if (!text || typeof text !== 'string') {
       return res.status(400).json({ error: 'Text input is required.' });
     }
 
@@ -48,7 +58,7 @@ ${text}
       });
       responseText = response.text || '';
     } catch (gemmaErr) {
-      console.warn('Gemma 31B failed, falling back to gemini-2.5-flash:', gemmaErr);
+      console.warn('Gemma 31B failed on Vercel, falling back to gemini-2.5-flash:', gemmaErr);
       const fallbackResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
@@ -62,34 +72,12 @@ ${text}
     if (responseText) {
       const cleanJson = responseText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
       const parsed = JSON.parse(cleanJson);
-      res.json(parsed);
+      return res.status(200).json(parsed);
     } else {
-      res.status(500).json({ error: 'Empty response from model.' });
+      return res.status(500).json({ error: 'Empty response from model.' });
     }
   } catch (error) {
-    console.error('Error parsing plan:', error);
-    res.status(500).json({ error: 'Failed to parse plan text.' });
+    console.error('Error parsing plan on Vercel function:', error);
+    return res.status(500).json({ error: 'Failed to parse plan text.' });
   }
-});
-
-async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa'
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
-  });
 }
-
-startServer();
