@@ -70,33 +70,37 @@ export default function App() {
 
   return (
     <div className="min-h-screen text-neutral-50 font-sans selection:bg-red-500/30 relative">
-      <div className="fixed inset-0 z-[-1] bg-black">
-        <img src={bgImage} alt="Background" className="w-full h-full object-cover opacity-40 object-top sm:object-center" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/60 to-black"></div>
+      <div className="fixed inset-0 z-[-1] bg-neutral-950">
+        <img 
+          src={bgImage} 
+          alt="Physique Background" 
+          className="w-full h-full object-cover opacity-90 sm:opacity-80 object-[center_18%] sm:object-center transition-opacity duration-300" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/25 to-black/70 pointer-events-none"></div>
       </div>
       <div className="max-w-5xl mx-auto px-3 py-4 sm:py-8 sm:px-6 lg:px-8 relative z-10">
-        <header className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-red-700 text-white p-2 rounded-xl shadow-sm">
-              <Dumbbell className="w-6 h-6" />
+        <header className="mb-6 sm:mb-8">
+          <div className="flex items-center gap-3 mb-1.5 sm:mb-2">
+            <div className="bg-red-600 text-white p-2 rounded-xl shadow-lg shadow-red-950/50">
+              <Dumbbell className="w-5 h-5 sm:w-6 h-6" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-50">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-50 drop-shadow-md">
               Workout Tracker
             </h1>
           </div>
-          <p className="text-neutral-400">Create plans, log exercises, and visualize progress.</p>
+          <p className="text-neutral-200 text-sm sm:text-base drop-shadow-md">Create plans, log exercises, and visualize progress.</p>
         </header>
 
-        <nav className="flex space-x-1 sm:space-x-2 bg-[#0a0a0a] border border-neutral-900 p-1.5 sm:p-1 rounded-xl mb-8 overflow-x-auto no-scrollbar">
+        <nav className="flex space-x-1 sm:space-x-2 bg-black/65 backdrop-blur-sm border border-neutral-800 p-1.5 sm:p-1 rounded-xl mb-6 sm:mb-8 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-2 px-3 sm:px-4 py-3 sm:py-2.5 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap
+              className={`flex-1 flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2.5 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap
                 ${
                   activeTab === tab.id
-                    ? 'bg-red-950/30 text-red-400 shadow-sm ring-1 ring-red-900/50'
-                    : 'text-neutral-400 hover:text-neutral-200 hover:bg-[#1a1a1a]'
+                    ? 'bg-red-600/35 text-red-200 shadow-sm ring-1 ring-red-500/50'
+                    : 'text-neutral-300 hover:text-white hover:bg-neutral-900/60'
                 }
               `}
             >
@@ -106,7 +110,7 @@ export default function App() {
           ))}
         </nav>
 
-        <main className="bg-black/80 backdrop-blur-xl rounded-2xl shadow-[0_0_40px_-10px_rgba(220,38,38,0.15)] border border-neutral-800 p-3 sm:p-6 lg:p-8 min-h-[500px]">
+        <main className="bg-black/75 backdrop-blur-sm rounded-2xl shadow-[0_0_50px_-10px_rgba(220,38,38,0.2)] border border-neutral-800 p-3 sm:p-6 lg:p-8 min-h-[500px]">
           {activeTab === 'log' && <WorkoutForm sessions={sessions} plans={plans} selectedPlanId={selectedPlanId} onSelectPlan={setSelectedPlanId} onSaveSession={addSession} />}
           {activeTab === 'plans' && <PlanManager plans={plans} onSavePlan={savePlan} onDeletePlan={deletePlan} onLogPlan={handleLogPlan} />}
           {activeTab === 'assessment' && <Assessment sessions={sessions} />}

@@ -177,7 +177,7 @@ export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan }: Plan
       </div>
 
       {isFormOpen && (
-        <form onSubmit={handleSubmit} className="bg-[#111111] p-4 sm:p-5 rounded-xl border border-neutral-800 space-y-5 animate-in fade-in slide-in-from-top-2 duration-200">
+        <form onSubmit={handleSubmit} className="bg-black/50 p-4 sm:p-5 rounded-xl border border-neutral-700/60 space-y-5 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-medium text-neutral-50">
               {editingPlanId ? 'Edit Plan' : 'Create New Plan'}
@@ -185,7 +185,7 @@ export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan }: Plan
             <button
               type="button"
               onClick={handleCancelEdit}
-              className="text-sm font-medium text-neutral-400 hover:text-neutral-50 inline-flex items-center gap-1 p-1 rounded-md hover:bg-[#1a1a1a] transition-colors"
+              className="text-sm font-medium text-neutral-400 hover:text-neutral-50 inline-flex items-center gap-1 p-1 rounded-md hover:bg-neutral-800/50 transition-colors"
             >
               <X className="w-4 h-4" /> Cancel
             </button>
@@ -198,7 +198,7 @@ export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan }: Plan
               placeholder="e.g. Push Day"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 w-full px-3 py-2 rounded-lg border border-neutral-800 bg-[#0f0f0f] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600 text-neutral-100 placeholder:text-neutral-600"
+              className="mt-1 w-full px-3 py-2 rounded-lg border border-neutral-700/60 bg-black/50 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600 text-neutral-100 placeholder:text-neutral-500"
             />
           </div>
 
@@ -322,7 +322,7 @@ export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan }: Plan
           <h3 className="font-medium text-neutral-50">Your Plans</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             {plans.map(plan => (
-              <div key={plan.id} className="bg-[#0f0f0f] border border-neutral-800 rounded-xl p-4 shadow-sm flex flex-col justify-between items-start gap-4">
+              <div key={plan.id} className="bg-black/50 border border-neutral-700/60 rounded-xl p-4 shadow-sm flex flex-col justify-between items-start gap-4 hover:border-neutral-600 transition-colors">
                 <div className="flex justify-between items-start w-full">
                   <div>
                     <h4 className="font-semibold text-neutral-50">{plan.name}</h4>
@@ -331,14 +331,14 @@ export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan }: Plan
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleEditPlan(plan)}
-                      className="text-neutral-500 hover:text-neutral-50 p-1.5 rounded-md hover:bg-[#1a1a1a] transition-colors"
+                      className="text-neutral-400 hover:text-neutral-50 p-1.5 rounded-md hover:bg-neutral-800/60 transition-colors"
                       title="Edit Plan"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => onDeletePlan(plan.id)}
-                      className="text-neutral-500 hover:text-red-500 p-1.5 rounded-md hover:bg-red-950/30 transition-colors"
+                      className="text-neutral-400 hover:text-red-400 p-1.5 rounded-md hover:bg-red-950/40 transition-colors"
                       title="Delete Plan"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -347,7 +347,7 @@ export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan }: Plan
                 </div>
                 <button
                   onClick={() => onLogPlan(plan.id)}
-                  className="w-full flex items-center justify-center gap-2 py-2 bg-[#1a1a1a] hover:bg-[#222222] text-neutral-50 text-sm font-medium rounded-lg transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-2 bg-neutral-900/80 hover:bg-neutral-800/90 text-neutral-100 text-sm font-medium rounded-lg transition-colors border border-neutral-800"
                 >
                   <Dumbbell className="w-4 h-4" /> Log this plan
                 </button>
