@@ -41,10 +41,12 @@ Output ONLY a valid JSON array with this exact structure (no markdown fences, no
   {
     "name": "Exercise Name (e.g. Bench Press)",
     "targetSets": 3, 
-    "targetReps": "8-12"
+    "targetReps": "8-12",
+    "targetWeight": "30kg"
   }
 ]
 If sets/reps are missing, default to 3 sets of "8-12".
+If weight is specified (e.g., 30kg, 60 lbs, bodyweight), include it in "targetWeight", otherwise leave it as an empty string "".
 
 Here is the workout plan text:
 ${text}

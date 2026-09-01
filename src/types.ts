@@ -3,11 +3,13 @@ export interface PlanExercise {
   name: string;
   targetSets: number;
   targetReps: string;
+  targetWeight?: string;
 }
 
 export interface WorkoutPlan {
   id: string;
   name: string;
+  notes?: string;
   exercises: PlanExercise[];
 }
 
@@ -25,6 +27,7 @@ export interface LoggedExercise {
   name: string;
   targetSets: number;
   targetReps: string;
+  targetWeight?: string;
   status: 'completed' | 'missed';
   notes: string;
   sets: LoggedSet[];

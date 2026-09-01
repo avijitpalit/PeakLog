@@ -24,7 +24,8 @@ export function Assessment({ sessions }: AssessmentProps) {
     if (session.notes) text += `Session Notes: ${session.notes}\n`;
     
     session.exercises.forEach((ex) => {
-      text += `\n${ex.name} (${ex.targetSets} × ${ex.targetReps})\n`;
+      const weightLabel = ex.targetWeight ? ` (${ex.targetWeight})` : '';
+      text += `\n${ex.name}${weightLabel} (${ex.targetSets} × ${ex.targetReps})\n`;
       
       if (ex.notes && ex.notes.trim()) {
         text += `Exercise Note: ${ex.notes.trim()}\n`;
