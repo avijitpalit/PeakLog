@@ -23,98 +23,117 @@ interface WorkoutFormProps {
 
 const DRAFT_STORAGE_KEY = 'active_workout_draft';
 
+function createInitialExercises(plan: WorkoutPlan, sessions: WorkoutSession[]): LoggedExercise[] {
+  const sortedSessions = [...sessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  
+  return plan.exercises.map(ex => {
+    // Try to find the most recent session where this exercise was logged
+    let previousSets: LoggedSet[] = [];
+    for (const session of sortedSessions) {
+      const prevEx = session.exercises.find(e => e.planExerciseId === ex.id && e.status === 'completed');
+      if (prevEx && prevEx.sets.length > 0) {
+        previousSets = prevEx.sets.map(s => ({
+          id: uuidv4(),
+          weight: s.weight,
+          reps: s.reps,
+          rir: s.rir || '',
+          notes: s.notes || ''
+        }));
+        break;
+      }
+    }
+
+    const defaultSetsCount = ex.targetSets && ex.targetSets > 0 ? ex.targetSets : 3;
+
+    return {
+      id: uuidv4(),
+      planExerciseId: ex.id,
+      name: ex.name,
+      targetSets: ex.targetSets,
+      targetReps: ex.targetReps,
+      targetWeight: ex.targetWeight,
+      status: 'completed',
+      notes: '',
+      sets: previousSets.length > 0 ? previousSets : Array.from({ length: defaultSetsCount }, () => ({
+        id: uuidv4(),
+        weight: ex.targetWeight || '',
+        reps: '',
+        rir: '',
+        notes: ''
+      }))
+    };
+  });
+}
+
 export function WorkoutForm({ plans, sessions, selectedPlanId, onSelectPlan, onSaveSession }: WorkoutFormProps) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [sessionNotes, setSessionNotes] = useState('');
   const [exercises, setExercises] = useState<LoggedExercise[]>([]);
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
-  const [isDraftRestored, setIsDraftRestored] = useState(false);
-  const isInitialMount = useRef(true);
+  const currentLoadedPlanIdRef = useRef<string | null>(null);
 
-  // Restore draft from localStorage on initial load
+  // Initialize or restore exercises whenever selectedPlanId or plans change
   useEffect(() => {
+    if (!selectedPlanId) {
+      // Check if there is an existing draft with a valid plan
+      try {
+        const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (savedDraft) {
+          const parsed = JSON.parse(savedDraft);
+          if (parsed.selectedPlanId && plans.some(p => p.id === parsed.selectedPlanId)) {
+            onSelectPlan(parsed.selectedPlanId);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load draft:', e);
+      }
+
+      setExercises([]);
+      currentLoadedPlanIdRef.current = null;
+      return;
+    }
+
+    // If this plan is already loaded and exercises exist, do not overwrite with fresh template
+    if (currentLoadedPlanIdRef.current === selectedPlanId && exercises.length > 0) {
+      return;
+    }
+
+    // Check if there is a saved draft for this specific plan
     try {
       const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (savedDraft) {
         const parsed = JSON.parse(savedDraft);
-        if (parsed.selectedPlanId) {
-          if (!selectedPlanId || selectedPlanId === parsed.selectedPlanId) {
-            onSelectPlan(parsed.selectedPlanId);
-            if (parsed.date) setDate(parsed.date);
-            if (parsed.sessionNotes) setSessionNotes(parsed.sessionNotes);
-            if (Array.isArray(parsed.exercises) && parsed.exercises.length > 0) {
-              setExercises(parsed.exercises);
-            }
-            if (parsed.savedAt) {
-              setLastSavedTime(new Date(parsed.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-            }
-            setIsDraftRestored(true);
+        if (parsed.selectedPlanId === selectedPlanId && Array.isArray(parsed.exercises) && parsed.exercises.length > 0) {
+          if (parsed.date) setDate(parsed.date);
+          if (parsed.sessionNotes !== undefined) setSessionNotes(parsed.sessionNotes);
+          setExercises(parsed.exercises);
+          if (parsed.savedAt) {
+            setLastSavedTime(new Date(parsed.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
           }
+          currentLoadedPlanIdRef.current = selectedPlanId;
+          return;
         }
       }
     } catch (e) {
       console.warn('Failed to restore active workout draft:', e);
     }
-  }, []);
 
-  // When selectedPlanId changes manually (and not restoring from draft), initialize exercises from plan
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-
-    if (!selectedPlanId) {
-      setExercises([]);
-      return;
-    }
-
+    // Otherwise generate initial exercises from plan
     const plan = plans.find(p => p.id === selectedPlanId);
     if (plan) {
-      setExercises(plan.exercises.map(ex => {
-        // Try to find the most recent session where this exercise was logged
-        const sortedSessions = [...sessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        let previousSets: LoggedSet[] = [];
-        for (const session of sortedSessions) {
-          const prevEx = session.exercises.find(e => e.planExerciseId === ex.id && e.status === 'completed');
-          if (prevEx && prevEx.sets.length > 0) {
-            previousSets = prevEx.sets.map(s => ({
-              id: uuidv4(),
-              weight: s.weight,
-              reps: s.reps,
-              rir: s.rir || '',
-              notes: s.notes || ''
-            }));
-            break;
-          }
-        }
-        
-        return {
-          id: uuidv4(),
-          planExerciseId: ex.id,
-          name: ex.name,
-          targetSets: ex.targetSets,
-          targetReps: ex.targetReps,
-          targetWeight: ex.targetWeight,
-          status: 'completed',
-          notes: '',
-          sets: previousSets.length > 0 ? previousSets : [{ 
-            id: uuidv4(), 
-            weight: ex.targetWeight || '', 
-            reps: '', 
-            rir: '', 
-            notes: '' 
-          }]
-        };
-      }));
+      const initialExercises = createInitialExercises(plan, sessions);
+      setExercises(initialExercises);
+      currentLoadedPlanIdRef.current = selectedPlanId;
     } else {
       setExercises([]);
+      currentLoadedPlanIdRef.current = null;
     }
   }, [selectedPlanId, plans, sessions]);
 
   // Real-time Auto-saving: whenever exercises, date, sessionNotes, or planId change, persist immediately!
   useEffect(() => {
-    if (!selectedPlanId && exercises.length === 0) return;
+    if (!selectedPlanId || exercises.length === 0) return;
 
     try {
       const now = new Date();
@@ -134,11 +153,11 @@ export function WorkoutForm({ plans, sessions, selectedPlanId, onSelectPlan, onS
   const handleClearDraft = () => {
     if (window.confirm('Reset current active workout draft? Unsaved changes will be cleared.')) {
       localStorage.removeItem(DRAFT_STORAGE_KEY);
+      currentLoadedPlanIdRef.current = null;
       onSelectPlan('');
       setSessionNotes('');
       setExercises([]);
       setLastSavedTime(null);
-      setIsDraftRestored(false);
     }
   };
 
@@ -231,6 +250,7 @@ export function WorkoutForm({ plans, sessions, selectedPlanId, onSelectPlan, onS
     // Save and clear active draft
     onSaveSession(session);
     localStorage.removeItem(DRAFT_STORAGE_KEY);
+    currentLoadedPlanIdRef.current = null;
     onSelectPlan('');
     setSessionNotes('');
     setExercises([]);
