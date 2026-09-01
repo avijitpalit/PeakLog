@@ -8,8 +8,7 @@ import {
   ChevronDown, 
   CheckCircle2, 
   Info, 
-  RotateCcw,
-  PlusCircle
+  RotateCcw
 } from 'lucide-react';
 import { WorkoutPlan, WorkoutSession, LoggedExercise, LoggedSet } from '../types';
 
@@ -208,24 +207,6 @@ export function WorkoutForm({ plans, sessions, selectedPlanId, onSelectPlan, onS
     }));
   };
 
-  // Insert set in between at specific index
-  const handleInsertSetBelow = (exId: string, currentIndex: number) => {
-    setExercises(exercises.map(ex => {
-      if (ex.id !== exId) return ex;
-      const currentSet = ex.sets[currentIndex];
-      const newSet: LoggedSet = {
-        id: uuidv4(),
-        weight: currentSet ? currentSet.weight : (ex.targetWeight || ''),
-        reps: '',
-        rir: currentSet?.rir || '',
-        notes: ''
-      };
-      const updatedSets = [...ex.sets];
-      updatedSets.splice(currentIndex + 1, 0, newSet);
-      return { ...ex, sets: updatedSets };
-    }));
-  };
-
   const handleRemoveSet = (exId: string, setId: string) => {
     setExercises(exercises.map(ex => {
       if (ex.id !== exId) return ex;
@@ -411,7 +392,7 @@ export function WorkoutForm({ plans, sessions, selectedPlanId, onSelectPlan, onS
                     className="w-full px-3 py-2 rounded-lg border border-neutral-800 bg-[#0f0f0f] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600 text-neutral-100 placeholder:text-neutral-600"
                   />
 
-                  {/* Sets List with Insert in-between */}
+                  {/* Sets List */}
                   <div className="space-y-2">
                     {/* Header labels */}
                     <div className="flex items-center gap-2 px-1 text-xs font-medium text-neutral-500">
@@ -420,7 +401,7 @@ export function WorkoutForm({ plans, sessions, selectedPlanId, onSelectPlan, onS
                       <span className="w-16 sm:w-20 shrink-0">Reps</span>
                       <span className="w-14 sm:w-16 shrink-0">RIR</span>
                       <span className="hidden md:block flex-1 min-w-0">Notes</span>
-                      <span className="w-16 shrink-0 text-center">Actions</span>
+                      <span className="w-8 shrink-0 text-center"></span>
                     </div>
 
                     {ex.sets.map((set, idx) => (
@@ -466,16 +447,8 @@ export function WorkoutForm({ plans, sessions, selectedPlanId, onSelectPlan, onS
                           />
                         </div>
 
-                        {/* Actions: Insert below + Delete set */}
-                        <div className="w-16 shrink-0 flex items-center justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleInsertSetBelow(ex.id, idx)}
-                            className="p-1.5 text-neutral-400 hover:text-emerald-400 hover:bg-emerald-950/30 rounded-lg transition-colors flex items-center justify-center"
-                            title="Insert set below"
-                          >
-                            <PlusCircle className="w-4 h-4" />
-                          </button>
+                        {/* Remove set action */}
+                        <div className="w-8 shrink-0 flex items-center justify-center">
                           <button
                             type="button"
                             onClick={() => handleRemoveSet(ex.id, set.id)}
@@ -490,13 +463,15 @@ export function WorkoutForm({ plans, sessions, selectedPlanId, onSelectPlan, onS
                     ))}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleAddSet(ex.id)}
-                    className="text-xs font-medium text-neutral-300 hover:text-white bg-[#141414] border border-neutral-800 hover:border-neutral-700 px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Set
-                  </button>
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleAddSet(ex.id)}
+                      className="text-xs font-medium text-neutral-300 hover:text-white bg-[#141414] border border-neutral-800 hover:border-neutral-700 px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Set
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
