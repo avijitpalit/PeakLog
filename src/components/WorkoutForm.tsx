@@ -8,7 +8,8 @@ import {
   ChevronDown, 
   CheckCircle2, 
   Info, 
-  RotateCcw
+  RotateCcw,
+  TrendingUp
 } from 'lucide-react';
 import { WorkoutPlan, WorkoutSession, LoggedExercise, LoggedSet } from '../types';
 
@@ -22,15 +23,96 @@ interface WorkoutFormProps {
 
 const DRAFT_STORAGE_KEY = 'active_workout_draft';
 
+function parseNumericReps(repsStr: string | number | undefined): number {
+  if (typeof repsStr === 'number') return repsStr;
+  if (!repsStr) return 0;
+  const match = repsStr.toString().match(/\d+/);
+  return match ? parseInt(match[0], 10) : 0;
+}
+
+function parseTargetReps(targetReps: string): { minReps: number; maxReps: number } {
+  if (!targetReps) return { minReps: 8, maxReps: 12 };
+  const clean = targetReps.toLowerCase().replace(/reps?|times?/g, '').trim();
+  const rangeMatch = clean.match(/^(\d+)\s*[-–—xX]\s*(\d+)/);
+  if (rangeMatch) {
+    const r1 = parseInt(rangeMatch[1], 10) || 1;
+    const r2 = parseInt(rangeMatch[2], 10) || 1;
+    return {
+      minReps: Math.min(r1, r2),
+      maxReps: Math.max(r1, r2)
+    };
+  }
+  const singleMatch = clean.match(/^(\d+)/);
+  if (singleMatch) {
+    const val = parseInt(singleMatch[1], 10) || 1;
+    return { minReps: val, maxReps: val };
+  }
+  return { minReps: 8, maxReps: 12 };
+}
+
+function getOverloadStatus(
+  exerciseName: string,
+  targetRepsStr: string,
+  targetSetsCount: number,
+  sessions: WorkoutSession[]
+): { isReady: boolean; tooltip: string } | null {
+  if (!sessions || sessions.length === 0 || !exerciseName) return null;
+
+  const sortedSessions = [...sessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const normalizedName = exerciseName.trim().toLowerCase();
+
+  for (const session of sortedSessions) {
+    if (!session || !Array.isArray(session.exercises)) continue;
+    const prevEx = session.exercises.find(
+      e => e && e.name && (e.name.trim().toLowerCase() === normalizedName) && e.status === 'completed'
+    );
+
+    if (!prevEx || !Array.isArray(prevEx.sets) || prevEx.sets.length === 0) continue;
+
+    // Use the effective target reps from the previous performance or current target
+    const effectiveTargetReps = prevEx.targetReps || targetRepsStr || '8-12';
+    const { maxReps } = parseTargetReps(effectiveTargetReps);
+
+    const loggedReps = prevEx.sets.map(s => parseNumericReps(s.reps)).filter(r => r > 0);
+    if (loggedReps.length === 0) continue;
+
+    const requiredSets = Math.min(prevEx.targetSets || targetSetsCount || 1, prevEx.sets.length);
+
+    // All logged sets completed and each hit or exceeded the top of the rep range
+    const allSetsHitTarget = 
+      loggedReps.length >= requiredSets && 
+      loggedReps.every(reps => reps >= maxReps);
+
+    if (allSetsHitTarget) {
+      const repList = loggedReps.join(', ');
+      const weightUsed = prevEx.sets.find(s => s && s.weight && s.weight.trim())?.weight || 'target weight';
+      const planNameInfo = session.planName ? ` in ${session.planName}` : '';
+      return {
+        isReady: true,
+        tooltip: `Ready to overload! Hit top rep target (${effectiveTargetReps}) across all sets [${repList}] @ ${weightUsed}${planNameInfo} on ${session.date || 'last session'}.`
+      };
+    } else {
+      // Found the most recent session for this exercise, but overload criteria was not met
+      return null;
+    }
+  }
+
+  return null;
+}
+
 function createInitialExercises(plan: WorkoutPlan, sessions: WorkoutSession[]): LoggedExercise[] {
   const sortedSessions = [...sessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   
-  return plan.exercises.map(ex => {
-    // Try to find the most recent session where this exercise was logged
+  return (plan.exercises || []).map(ex => {
+    // Try to find the most recent session where this exercise was logged (by ID or normalized name)
     let previousSets: LoggedSet[] = [];
     for (const session of sortedSessions) {
-      const prevEx = session.exercises.find(e => e.planExerciseId === ex.id && e.status === 'completed');
-      if (prevEx && prevEx.sets.length > 0) {
+      if (!session || !Array.isArray(session.exercises)) continue;
+      const prevEx = session.exercises.find(e => 
+        e && (e.planExerciseId === ex.id || (e.name && ex.name && e.name.trim().toLowerCase() === ex.name.trim().toLowerCase())) && 
+        e.status === 'completed'
+      );
+      if (prevEx && Array.isArray(prevEx.sets) && prevEx.sets.length > 0) {
         previousSets = prevEx.sets.map(s => ({
           id: uuidv4(),
           weight: s.weight,
@@ -324,7 +406,9 @@ export function WorkoutForm({ plans, sessions, selectedPlanId, onSelectPlan, onS
 
       {exercises.length > 0 && (
         <div className="space-y-6 sm:space-y-8">
-          {exercises.map((ex, exIndex) => (
+          {exercises.map((ex, exIndex) => {
+            const overloadInfo = getOverloadStatus(ex.name, ex.targetReps, ex.targetSets, sessions);
+            return (
             <div 
               key={ex.id} 
               className="pb-6 border-b border-neutral-800/80 last:border-0 last:pb-0 space-y-4 bg-black/30 p-3.5 sm:p-4 rounded-xl border border-neutral-800/60"
@@ -336,6 +420,15 @@ export function WorkoutForm({ plans, sessions, selectedPlanId, onSelectPlan, onS
                     <h3 className="font-semibold text-neutral-100 text-lg">
                       {ex.name}
                     </h3>
+                    {overloadInfo?.isReady && (
+                      <span
+                        title={overloadInfo.tooltip}
+                        aria-label="Ready to overload"
+                        className="inline-flex items-center justify-center p-1 rounded-md bg-emerald-950/70 border border-emerald-500/40 text-emerald-400 shadow-[0_0_10px_-2px_rgba(16,185,129,0.3)] animate-in fade-in transition-all cursor-help"
+                      >
+                        <TrendingUp className="w-3.5 h-3.5 shrink-0" />
+                      </span>
+                    )}
                     {ex.targetWeight && (
                       <span className="px-2 py-0.5 bg-red-950/50 border border-red-500/40 text-red-300 font-semibold text-xs rounded-md">
                         {ex.targetWeight}
@@ -474,8 +567,9 @@ export function WorkoutForm({ plans, sessions, selectedPlanId, onSelectPlan, onS
                   </div>
                 </div>
               )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
           
           <div className="pt-2 space-y-2">
             <label className="text-sm font-medium text-neutral-300 block">Session Notes (Optional)</label>

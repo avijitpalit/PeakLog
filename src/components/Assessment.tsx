@@ -7,6 +7,73 @@ interface AssessmentProps {
   sessions: WorkoutSession[];
 }
 
+interface AssessmentCardProps {
+  key?: string;
+  session: WorkoutSession;
+  isCopied: boolean;
+  onCopy: (id: string, text: string) => void;
+  textToCopy: string;
+}
+
+function AssessmentCard({ session, isCopied, onCopy, textToCopy }: AssessmentCardProps) {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [hasOverflow, setHasOverflow] = useState(false);
+
+  const checkOverflow = React.useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const isOverflowing = el.scrollHeight > el.clientHeight;
+    const isScrolledToBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 12;
+    setHasOverflow(isOverflowing && !isScrolledToBottom);
+  }, []);
+
+  React.useEffect(() => {
+    checkOverflow();
+    window.addEventListener('resize', checkOverflow);
+    return () => window.removeEventListener('resize', checkOverflow);
+  }, [checkOverflow, textToCopy]);
+
+  return (
+    <div className="relative group bg-[#111111] border border-neutral-800 rounded-xl overflow-hidden shadow-sm h-64 sm:h-72 flex flex-col">
+      <div className="flex justify-between items-center bg-[#0f0f0f] border-b border-neutral-800 px-4 py-2.5 shrink-0">
+        <div className="font-medium text-neutral-200 text-sm truncate pr-2">
+          {format(parseISO(session.date), 'MMM d, yyyy')} <span className="text-neutral-500">•</span> {session.planName}
+        </div>
+        <button
+          type="button"
+          onClick={() => onCopy(session.id, textToCopy)}
+          title={isCopied ? 'Copied to clipboard' : 'Copy to clipboard'}
+          aria-label={isCopied ? 'Copied to clipboard' : 'Copy to clipboard'}
+          className={`shrink-0 p-2 rounded-lg transition-colors flex items-center justify-center ${
+            isCopied 
+              ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/40 shadow-sm' 
+              : 'bg-[#141414] border border-neutral-800 text-neutral-400 hover:text-neutral-100 hover:border-neutral-700 hover:bg-[#1a1a1a]'
+          }`}
+        >
+          {isCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+        </button>
+      </div>
+
+      <div className="relative flex-1 min-h-0">
+        <div 
+          ref={scrollRef}
+          onScroll={checkOverflow}
+          className="h-full overflow-y-auto p-3.5 sm:p-4"
+        >
+          <pre className="text-xs text-neutral-300 font-mono whitespace-pre-wrap leading-relaxed">
+            {textToCopy}
+          </pre>
+        </div>
+
+        {/* Bottom fade out when content overflows */}
+        {hasOverflow && (
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#111111] via-[#111111]/85 to-transparent transition-opacity duration-200" />
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function Assessment({ sessions }: AssessmentProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -90,41 +157,25 @@ export function Assessment({ sessions }: AssessmentProps) {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div>
         <h2 className="text-xl font-semibold text-neutral-50 mb-1">Assessment</h2>
         <p className="text-sm text-neutral-400">Copy your logged sessions in text format for AI assessment.</p>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-6">
         {sessions.map(session => {
           const textToCopy = generateAssessmentText(session);
           const isCopied = copiedId === session.id;
 
           return (
-            <div key={session.id} className="relative group bg-[#111111] border border-neutral-800 rounded-xl overflow-hidden shadow-sm">
-              <div className="flex justify-between items-center bg-[#0f0f0f] border-b border-neutral-800 px-4 py-3">
-                <div className="font-semibold text-neutral-50">
-                  {format(parseISO(session.date), 'MMM d, yyyy')} - {session.planName}
-                </div>
-                <button
-                  onClick={() => handleCopy(session.id, textToCopy)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    isCopied 
-                      ? 'bg-red-950/40 text-red-400 border border-red-500/30' 
-                      : 'bg-[#0f0f0f] border border-neutral-800 text-neutral-300 hover:bg-[#111111]'
-                  }`}
-                >
-                  {isCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {isCopied ? 'Copied!' : 'Copy to Clipboard'}
-                </button>
-              </div>
-              <div className="p-4 overflow-x-auto">
-                <pre className="text-base sm:text-sm text-neutral-200 font-mono whitespace-pre-wrap leading-relaxed">
-                  {textToCopy}
-                </pre>
-              </div>
-            </div>
+            <AssessmentCard
+              key={session.id}
+              session={session}
+              isCopied={isCopied}
+              onCopy={handleCopy}
+              textToCopy={textToCopy}
+            />
           );
         })}
       </div>
