@@ -11,12 +11,13 @@ import {
   RotateCcw,
   TrendingUp
 } from 'lucide-react';
-import { WorkoutPlan, WorkoutSession, LoggedExercise, LoggedSet } from '../types';
+import { WorkoutPlan, WorkoutSession, LoggedExercise, LoggedSet, ExerciseItem } from '../types';
 
 interface WorkoutFormProps {
   plans: WorkoutPlan[];
   sessions: WorkoutSession[];
   selectedPlanId: string;
+  exerciseItems?: ExerciseItem[];
   onSelectPlan: (id: string) => void;
   onSaveSession: (session: WorkoutSession) => void;
 }
@@ -100,10 +101,13 @@ function getOverloadStatus(
   return null;
 }
 
-function createInitialExercises(plan: WorkoutPlan, sessions: WorkoutSession[]): LoggedExercise[] {
+function createInitialExercises(plan: WorkoutPlan, sessions: WorkoutSession[], exerciseItems?: ExerciseItem[]): LoggedExercise[] {
   const sortedSessions = [...sessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   
   return (plan.exercises || []).map(ex => {
+    const exItem = exerciseItems?.find(ei => ei.name && ex.name && ei.name.trim().toLowerCase() === ex.name.trim().toLowerCase());
+    const currentWeightFromRegistry = exItem?.currentWeight || ex.targetWeight || '';
+
     // Try to find the most recent session where this exercise was logged (by ID or normalized name)
     let previousSets: LoggedSet[] = [];
     for (const session of sortedSessions) {
@@ -115,7 +119,7 @@ function createInitialExercises(plan: WorkoutPlan, sessions: WorkoutSession[]): 
       if (prevEx && Array.isArray(prevEx.sets) && prevEx.sets.length > 0) {
         previousSets = prevEx.sets.map(s => ({
           id: uuidv4(),
-          weight: s.weight,
+          weight: s.weight || currentWeightFromRegistry,
           reps: s.reps,
           rir: s.rir || '',
           notes: s.notes || ''
@@ -132,12 +136,12 @@ function createInitialExercises(plan: WorkoutPlan, sessions: WorkoutSession[]): 
       name: ex.name,
       targetSets: ex.targetSets,
       targetReps: ex.targetReps,
-      targetWeight: ex.targetWeight,
+      targetWeight: currentWeightFromRegistry || ex.targetWeight,
       status: 'completed',
       notes: '',
       sets: previousSets.length > 0 ? previousSets : Array.from({ length: defaultSetsCount }, () => ({
         id: uuidv4(),
-        weight: ex.targetWeight || '',
+        weight: currentWeightFromRegistry || '',
         reps: '',
         rir: '',
         notes: ''
@@ -146,7 +150,7 @@ function createInitialExercises(plan: WorkoutPlan, sessions: WorkoutSession[]): 
   });
 }
 
-export function WorkoutForm({ plans, sessions, selectedPlanId, onSelectPlan, onSaveSession }: WorkoutFormProps) {
+export function WorkoutForm({ plans, sessions, selectedPlanId, exerciseItems, onSelectPlan, onSaveSession }: WorkoutFormProps) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [sessionNotes, setSessionNotes] = useState('');
   const [exercises, setExercises] = useState<LoggedExercise[]>([]);
@@ -203,14 +207,14 @@ export function WorkoutForm({ plans, sessions, selectedPlanId, onSelectPlan, onS
     // Otherwise generate initial exercises from plan
     const plan = plans.find(p => p.id === selectedPlanId);
     if (plan) {
-      const initialExercises = createInitialExercises(plan, sessions);
+      const initialExercises = createInitialExercises(plan, sessions, exerciseItems);
       setExercises(initialExercises);
       currentLoadedPlanIdRef.current = selectedPlanId;
     } else {
       setExercises([]);
       currentLoadedPlanIdRef.current = null;
     }
-  }, [selectedPlanId, plans, sessions]);
+  }, [selectedPlanId, plans, sessions, exerciseItems]);
 
   // Real-time Auto-saving: whenever exercises, date, sessionNotes, or planId change, persist immediately!
   useEffect(() => {
@@ -408,6 +412,11 @@ export function WorkoutForm({ plans, sessions, selectedPlanId, onSelectPlan, onS
         <div className="space-y-6 sm:space-y-8">
           {exercises.map((ex, exIndex) => {
             const overloadInfo = getOverloadStatus(ex.name, ex.targetReps, ex.targetSets, sessions);
+            const exItem = exerciseItems?.find(ei => ei.name && ex.name && ei.name.trim().toLowerCase() === ex.name.trim().toLowerCase());
+            const isOverloadChecked = exItem ? exItem.isOverload : false;
+            const showProgressIcon = isOverloadChecked || overloadInfo?.isReady;
+            const currentWeightToDisplay = exItem?.currentWeight || ex.targetWeight;
+
             return (
             <div 
               key={ex.id} 
@@ -420,18 +429,21 @@ export function WorkoutForm({ plans, sessions, selectedPlanId, onSelectPlan, onS
                     <h3 className="font-semibold text-neutral-100 text-lg">
                       {ex.name}
                     </h3>
-                    {overloadInfo?.isReady && (
+                    {showProgressIcon && (
                       <span
-                        title={overloadInfo.tooltip}
+                        title={isOverloadChecked ? 'Overload active: Ready to increase weight!' : (overloadInfo?.tooltip || 'Ready to overload')}
                         aria-label="Ready to overload"
                         className="inline-flex items-center justify-center p-1 rounded-md bg-emerald-950/70 border border-emerald-500/40 text-emerald-400 shadow-[0_0_10px_-2px_rgba(16,185,129,0.3)] animate-in fade-in transition-all cursor-help"
                       >
                         <TrendingUp className="w-3.5 h-3.5 shrink-0" />
                       </span>
                     )}
-                    {ex.targetWeight && (
-                      <span className="px-2 py-0.5 bg-red-950/50 border border-red-500/40 text-red-300 font-semibold text-xs rounded-md">
-                        {ex.targetWeight}
+                    {currentWeightToDisplay && (
+                      <span 
+                        title="Current Weight"
+                        className="px-2 py-0.5 bg-red-950/50 border border-red-500/40 text-red-300 font-semibold text-xs rounded-md"
+                      >
+                        {currentWeightToDisplay}
                       </span>
                     )}
                   </div>

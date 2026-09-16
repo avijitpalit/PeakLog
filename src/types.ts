@@ -41,3 +41,13 @@ export interface WorkoutSession {
   notes?: string;
   exercises: LoggedExercise[];
 }
+
+export interface ExerciseItem {
+  id: string;
+  name: string;
+  currentWeight: string;
+  isOverload: boolean;
+  targetSets?: number;
+  targetReps?: string;
+  notes?: string;
+}

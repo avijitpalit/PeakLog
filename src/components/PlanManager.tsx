@@ -374,8 +374,8 @@ export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan, onReor
                   </div>
 
                   {/* Row 2: Sets, Rep Range, Weight Input */}
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                    <div>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 min-w-0 w-full">
+                    <div className="min-w-0">
                       <label className="text-xs text-neutral-400 mb-1 block font-medium">Sets</label>
                       <input
                         type="number"
@@ -383,10 +383,10 @@ export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan, onReor
                         required
                         value={ex.targetSets}
                         onChange={(e) => handleExerciseChange(index, 'targetSets', parseInt(e.target.value) || 0)}
-                        className="w-full px-3 py-2 rounded-lg border border-neutral-800 bg-[#0f0f0f] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600 text-neutral-100"
+                        className="w-full min-w-0 px-2.5 sm:px-3 py-2 rounded-lg border border-neutral-800 bg-[#0f0f0f] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600 text-neutral-100"
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="text-xs text-neutral-400 mb-1 block font-medium">Rep Range</label>
                       <input
                         type="text"
@@ -394,10 +394,10 @@ export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan, onReor
                         placeholder="e.g. 8-12"
                         value={ex.targetReps}
                         onChange={(e) => handleExerciseChange(index, 'targetReps', e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border border-neutral-800 bg-[#0f0f0f] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600 text-neutral-100 placeholder:text-neutral-600"
+                        className="w-full min-w-0 px-2.5 sm:px-3 py-2 rounded-lg border border-neutral-800 bg-[#0f0f0f] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600 text-neutral-100 placeholder:text-neutral-600"
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="text-xs text-neutral-400 mb-1 block font-medium">
                         Weight <span className="text-neutral-500 font-normal">(Opt)</span>
                       </label>
@@ -406,7 +406,7 @@ export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan, onReor
                         placeholder="e.g. 30kg"
                         value={ex.targetWeight || ''}
                         onChange={(e) => handleExerciseChange(index, 'targetWeight', e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border border-neutral-800 bg-[#0f0f0f] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600 text-neutral-100 placeholder:text-neutral-600"
+                        className="w-full min-w-0 px-2.5 sm:px-3 py-2 rounded-lg border border-neutral-800 bg-[#0f0f0f] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-600 text-neutral-100 placeholder:text-neutral-600"
                       />
                     </div>
                   </div>
@@ -448,22 +448,24 @@ export function PlanManager({ plans, onSavePlan, onDeletePlan, onLogPlan, onReor
             <span className="text-xs text-neutral-400">Use arrows to reorder plans</span>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 min-w-0 w-full">
             {plans.map((plan, planIdx) => (
               <div 
                 key={plan.id} 
-                className="bg-black/50 border border-neutral-700/60 rounded-xl p-4 shadow-sm flex flex-col justify-between items-start gap-4 hover:border-neutral-600 transition-all group"
+                className="bg-black/50 border border-neutral-700/60 rounded-xl p-4 shadow-sm flex flex-col justify-between items-start gap-4 hover:border-neutral-600 transition-all group min-w-0 w-full overflow-hidden"
               >
-                <div className="flex justify-between items-start w-full">
-                  <div className="space-y-1 min-w-0 pr-2">
+                <div className="flex justify-between items-start w-full gap-2 min-w-0">
+                  <div className="space-y-1 min-w-0 flex-1">
                     <h4 className="font-semibold text-neutral-50 truncate">{plan.name}</h4>
                     <p className="text-xs text-neutral-400">
                       {plan.exercises.length} exercises
                     </p>
                     {plan.notes && (
-                      <div className="mt-1 flex items-start gap-1.5 text-xs text-amber-300/90 line-clamp-2">
+                      <div className="mt-1 flex items-start gap-1.5 text-xs text-amber-300/90 min-w-0 w-full">
                         <FileText className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-400" />
-                        <span className="truncate">{plan.notes}</span>
+                        <p className="text-xs text-amber-300/90 line-clamp-2 min-w-0 flex-1 break-words leading-relaxed">
+                          {plan.notes}
+                        </p>
                       </div>
                     )}
                   </div>
